@@ -15,7 +15,7 @@ import axiosClient from '../api/axios';
 import Modal from '../components/Modal';
 import DashboardLayout from '../layouts/MainLayout';
 import Button from '../components/Button';
-import { subscriptionService } from '../services/subscriptionService s';
+import { subscriptionService } from '../services/subscriptionService';
 
 const SubscriptionsPage = () => {
   const [form, setForm] = useState({
