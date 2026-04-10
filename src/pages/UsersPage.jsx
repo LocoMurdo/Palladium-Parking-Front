@@ -2,8 +2,12 @@ import React, { useEffect, useState } from 'react';
 import DashboardLayout from '../layouts/MainLayout';
 import Button from '../components/Button';
 import { authService } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
 
 const UsersPage = () => {
+  const { role } = useAuth();
+  const isAdmin = role === 1 || role === 'Admin';
+
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,13 +57,16 @@ const UsersPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase">Usuario</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase">Acciones</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase">Rol</th>
+                {isAdmin && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-900 uppercase">Acciones</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {!loading && users.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-6 py-8 text-center text-gray-500">No hay usuarios disponibles.</td>
+                  <td colSpan={isAdmin ? 5 : 4} className="px-6 py-8 text-center text-gray-500">No hay usuarios disponibles.</td>
                 </tr>
               )}
 
@@ -69,10 +76,19 @@ const UsersPage = () => {
                   <td className="px-6 py-4 text-sm text-gray-900">{user.userName}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{`${user.names || ''} ${user.lastNames || ''}`.trim() || '-'}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    <Button size="sm" variant="danger" onClick={() => handleDelete(user.userId || user.id)}>
-                      Eliminar
-                    </Button>
+                    {user.role === 1 || user.role === 'Admin' ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Admin</span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Colaborador</span>
+                    )}
                   </td>
+                  {isAdmin && (
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <Button size="sm" variant="danger" onClick={() => handleDelete(user.userId || user.id)}>
+                        Eliminar
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

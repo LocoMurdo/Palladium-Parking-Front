@@ -34,4 +34,14 @@ export const subscriptionService = {
     const response = await axiosClient.post(`/subscriptions/${id}/cancel`);
     return unwrapResult(response.data, 'Suscripcion cancelada');
   },
+
+  closeSubscription: async (id, method) => {
+    const response = await axiosClient.post(`/subscriptions/${id}/close`, { method });
+    return unwrapResult(response.data, 'Membresía cerrada');
+  },
+
+  changePaymentMethod: async (id, method) => {
+    const response = await axiosClient.put(`/subscriptions/${id}/payment-method`, { method });
+    return unwrapResult(response.data, 'Método de pago actualizado');
+  },
 };

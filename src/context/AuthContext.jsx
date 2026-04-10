@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
     const storedUser = tokenStorage.getUser();
@@ -17,10 +18,12 @@ export const AuthProvider = ({ children }) => {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(storedUser);
       setIsAuthenticated(true);
+      setRole(storedUser.role ?? null);
     } else {
       tokenStorage.clear();
       setUser(null);
       setIsAuthenticated(false);
+      setRole(null);
     }
     setLoading(false);
   }, []);
@@ -31,6 +34,7 @@ export const AuthProvider = ({ children }) => {
     tokenStorage.setRefreshToken(refreshToken);
     setUser(userData);
     setIsAuthenticated(true);
+    setRole(userData.role ?? null);
   };
 
   const logout = async () => {
@@ -49,6 +53,7 @@ export const AuthProvider = ({ children }) => {
     tokenStorage.clear();
     setUser(null);
     setIsAuthenticated(false);
+    setRole(null);
   };
 
   const value = {
@@ -57,6 +62,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     loading,
+    role,
   };
 
   return (

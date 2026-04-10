@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { TodayIncomeProvider } from './context/TodayIncomeContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 
@@ -20,6 +21,7 @@ import CreateUserPage from './pages/CreateUserPage';
 function App() {
   return (
     <AuthProvider>
+      <TodayIncomeProvider>
       <Router>
         <Routes>
           <Route
@@ -125,6 +127,7 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
+      </TodayIncomeProvider>
     </AuthProvider>
   );
 }

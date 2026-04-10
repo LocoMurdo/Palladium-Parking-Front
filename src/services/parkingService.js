@@ -83,4 +83,15 @@ export const parkingService = {
     const result = unwrapResult(response.data, 'Historial de cajas obtenido');
     return Array.isArray(result.data) ? result.data : [];
   },
+
+  changeSessionPaymentMethod: async (id, method) => {
+    const response = await axiosClient.put(`/ParkingSeassion/${id}/payment-method`, { method });
+    return unwrapResult(response.data, 'Método de pago actualizado');
+  },
+
+  getTodayIncome: async () => {
+    const response = await axiosClient.get('/CashRegister/today');
+    const result = unwrapResult(response.data, 'Ingresos del día obtenidos');
+    return result.data;
+  },
 };

@@ -5,7 +5,8 @@ import { useAuth } from '../hooks/useAuth';
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, role } = useAuth();
+  const isAdmin = role === 1 || role === 'Admin';
 
   const menuGroups = [
     {
@@ -30,7 +31,7 @@ const Sidebar = () => {
       title: 'Seguridad',
       items: [
         { name: 'Usuarios', path: '/users', icon: '👥' },
-        { name: 'Crear Usuario', path: '/create-user', icon: '👤' },
+        ...(isAdmin ? [{ name: 'Crear Usuario', path: '/create-user', icon: '👤' }] : []),
       ],
     },
   ];

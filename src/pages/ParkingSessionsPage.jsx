@@ -3,8 +3,14 @@ import DashboardLayout from '../layouts/MainLayout';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { parkingService } from '../services/parkingService';
+import { useAuth } from '../hooks/useAuth';
+import { useTodayIncome } from '../hooks/useTodayIncome';
 
 const ParkingSessionsPage = () => {
+  const { role } = useAuth();
+  const isAdmin = role === 1 || role === 'Admin';
+  const { refreshTodayIncome } = useTodayIncome();
+
   const [sessions, setSessions] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +21,9 @@ const ParkingSessionsPage = () => {
   const [cancelling, setCancelling] = useState(false);
   const [closeData, setCloseData] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('1');
+  const [changePaymentModal, setChangePaymentModal] = useState({ open: false, data: null });
+  const [changePaymentMethod, setChangePaymentMethod] = useState('1');
+  const [changingPayment, setChangingPayment] = useState(false);
 
   useEffect(() => {
     loadOpenSessions();
@@ -66,6 +75,7 @@ const ParkingSessionsPage = () => {
         closeResponse.totalAmount
       );
       await Promise.all([loadOpenSessions(), loadHistory()]);
+      refreshTodayIncome();
     } catch (err) {
       console.error('Error closing session:', err);
       alert(err.response?.data?.message || err.message || 'Error al cerrar la sesion');
@@ -151,6 +161,33 @@ const ParkingSessionsPage = () => {
     printWindow.document.close();
   };
 
+  const paymentMethodLabel = (method) => {
+    if (method === 1 || method === 'Cash') return 'Efectivo';
+    if (method === 2 || method === 'Card') return 'Tarjeta';
+    if (method === 3 || method === 'Sinpe') return 'SINPE';
+    return method || '-';
+  };
+
+  const handleChangePayment = (row) => {
+    setChangePaymentMethod('1');
+    setChangePaymentModal({ open: true, data: row });
+  };
+
+  const confirmChangePayment = async () => {
+    const id = changePaymentModal.data?.sessionId || changePaymentModal.data?.id;
+    setChangingPayment(true);
+    try {
+      await parkingService.changeSessionPaymentMethod(id, parseInt(changePaymentMethod, 10));
+      setChangePaymentModal({ open: false, data: null });
+      loadHistory();
+      refreshTodayIncome();
+    } catch (err) {
+      alert(err.response?.data?.message || err.message || 'No se pudo cambiar el método de pago');
+    } finally {
+      setChangingPayment(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -166,7 +203,6 @@ const ParkingSessionsPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 text-sm font-medium text-gray-700">Sesion</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Placa</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Entrada</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Tarifa</th>
@@ -176,20 +212,21 @@ const ParkingSessionsPage = () => {
               <tbody>
                 {!loading && sessions.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="py-6 text-center text-gray-500">No hay sesiones abiertas.</td>
+                    <td colSpan="4" className="py-6 text-center text-gray-500">No hay sesiones abiertas.</td>
                   </tr>
                 )}
 
                 {sessions.map((row) => (
                   <tr key={row.sessionId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="py-3 text-sm">{row.sessionId}</td>
-                    <td className="py-3 text-sm">{row.visitorPlate}</td>
+                    <td className="py-3 text-sm font-medium">{row.visitorPlate}</td>
                     <td className="py-3 text-sm">{formatDateTime(row.entryTime)}</td>
                     <td className="py-3 text-sm">{row.rateId}</td>
                     <td className="py-3 text-sm">
                       <div className="flex flex-wrap gap-2">
                       <Button variant="success" size="sm" onClick={() => setSelectedSession(row)}>Cerrar</Button>
-                      <Button variant="danger" size="sm" onClick={() => setCancelSessionData(row)}>Cancelar</Button>
+                      {isAdmin && (
+                        <Button variant="danger" size="sm" onClick={() => setCancelSessionData(row)}>Cancelar</Button>
+                      )}
                       </div>
                     </td>
                   </tr>
@@ -209,12 +246,12 @@ const ParkingSessionsPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="text-left py-2 text-sm font-medium text-gray-700">ID</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Placa</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Entrada</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Salida</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Total</th>
                   <th className="text-left py-2 text-sm font-medium text-gray-700">Estado</th>
+                  <th className="text-left py-2 text-sm font-medium text-gray-700">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,16 +261,23 @@ const ParkingSessionsPage = () => {
                   </tr>
                 )}
 
-                {history.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td className="py-3 text-sm">{row.id}</td>
-                    <td className="py-3 text-sm">{row.visitorPlate}</td>
-                    <td className="py-3 text-sm">{formatDateTime(row.entryTime)}</td>
-                    <td className="py-3 text-sm">{formatDateTime(row.exitTime)}</td>
-                    <td className="py-3 text-sm">{formatColones(row.totalAmount)}</td>
-                    <td className="py-3 text-sm">{row.status === 1 ? 'Abierta' : row.status === 2 ? 'Cerrada' : 'Cancelada'}</td>
-                  </tr>
-                ))}
+                {history.map((row) => {
+                  const isClosed = row.status === 2 || row.status === 'Closed';
+                  return (
+                    <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td className="py-3 text-sm font-medium">{row.visitorPlate}</td>
+                      <td className="py-3 text-sm">{formatDateTime(row.entryTime)}</td>
+                      <td className="py-3 text-sm">{formatDateTime(row.exitTime)}</td>
+                      <td className="py-3 text-sm">{formatColones(row.totalAmount)}</td>
+                      <td className="py-3 text-sm">{row.status === 1 ? 'Abierta' : row.status === 2 ? 'Cerrada' : 'Cancelada'}</td>
+                      <td className="py-3 text-sm">
+                        {isClosed && (
+                          <Button size="sm" variant="secondary" onClick={() => handleChangePayment(row)}>Cambiar Pago</Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -353,6 +397,45 @@ const ParkingSessionsPage = () => {
           <p className="text-gray-700">
             Estas seguro de cancelar la sesion {cancelSessionData?.sessionId} para la placa {cancelSessionData?.visitorPlate}?
           </p>
+        </Modal>
+
+        {/* Change Payment Method Modal */}
+        <Modal
+          isOpen={changePaymentModal.open}
+          onClose={() => setChangePaymentModal({ open: false, data: null })}
+          title="Cambiar Método de Pago"
+          actions={
+            <>
+              <Button variant="secondary" onClick={() => setChangePaymentModal({ open: false, data: null })}>Cancelar</Button>
+              <Button variant="success" onClick={confirmChangePayment} loading={changingPayment} disabled={changingPayment}>Confirmar</Button>
+            </>
+          }
+        >
+          {changePaymentModal.data && (
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                Cambiar método de pago para la sesión <b>#{changePaymentModal.data.sessionId || changePaymentModal.data.id}</b> - Placa: <b>{changePaymentModal.data.visitorPlate}</b>
+              </p>
+              {changePaymentModal.data.paymentMethod && (
+                <p className="text-sm text-gray-500">Método actual: <b>{paymentMethodLabel(changePaymentModal.data.paymentMethod)}</b></p>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2" htmlFor="changeSessionPayment">
+                  Nuevo método de pago
+                </label>
+                <select
+                  id="changeSessionPayment"
+                  value={changePaymentMethod}
+                  onChange={(e) => setChangePaymentMethod(e.target.value)}
+                  className="w-full px-4 py-2 bg-white text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                >
+                  <option value="1">Efectivo</option>
+                  <option value="2">Tarjeta</option>
+                  <option value="3">SINPE</option>
+                </select>
+              </div>
+            </div>
+          )}
         </Modal>
 
       </div>
